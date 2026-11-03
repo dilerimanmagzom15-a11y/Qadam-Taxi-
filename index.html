@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qadam Taxi</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #111;
+}
+header {
+  background: #111;
+  color: white;
+  padding: 16px;
+  border-bottom: 3px solid #ffd400;
+}
+header b { color: #ffd400; font-size: 24px; }
+#map { height: 72vh; width: 100%; }
+.panel {
+  background: #111;
+  color: white;
+  padding: 15px;
+}
+input {
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #ffd400;
+  margin-bottom: 10px;
+}
+button {
+  background: #ffd400;
+  color: #111;
+  border: 0;
+  border-radius: 10px;
+  padding: 13px;
+  font-weight: bold;
+  width: 100%;
+}
+</style>
+</head>
+
+<body>
+<header>
+  <b>QADAM TAXI</b>
+  <div>Такси және жеткізу қызметі</div>
+</header>
+
+<div id="map"></div>
+
+<div class="panel">
+  <input id="address" placeholder="Қай жерге барасыз?">
+  <button onclick="findPlace()">Мекенжайды іздеу</button>
+  <p id="status">Ақтөбе картасы дайын</p>
+  <button onclick="myLocation()">📍 Менің орнымды көрсету</button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map = L.map('map').setView([50.2839, 57.1670], 13);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
+let marker;
+
+function myLocation() {
+  if (!navigator.geolocation) {
+    document.getElementById('status').innerText =
+      'Орналасуды анықтау мүмкін емес';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(position => {
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
+
+    map.setView([lat, lon], 16);
+
+    if (marker) map.removeLayer(marker);
+
+    marker = L.marker([lat, lon]).addTo(map)
+      .bindPopup('Сіздің тұрған жеріңіз').openPopup();
+
+    document.getElementById('status').innerText =
+      'Орналасқан жеріңіз анықталды!';
+  }, () => {
+    document.getElementById('status').innerText =
+      'Орналасуға рұқсат беріңіз';
+  });
+}
+
+async function findPlace() {
+  const address = document.getElementById('address').value;
+  if (!address.trim()) return;
+
+  document.getElementById('status').innerText = 'Ізделуде...';
+
+  try {
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&q='
+      + encodeURIComponent(address + ', Ақтөбе, Қазақстан');
+
+    const response = await fetch(url);
+    const results = await response.json();
+
+    if (!results.length) {
+      document.getElementById('status').innerText =
+        'Мекенжай табылмады';
+      return;
+    }
+
+    const place = results[0];
+    const point = [Number(place.lat), Number(place.lon)];
+
+    map.setView(point, 16);
+
+    if (marker) map.removeLayer(marker);
+
+    marker = L.marker(point).addTo(map)
+      .bindPopup(place.display_name).openPopup();
+
+    document.getElementById('status').innerText =
+      'Мекенжай картадан табылды!';
+  } catch (error) {
+    document.getElementById('status').innerText =
+      'Қате шықты. Қайта көріңіз.';
+  }
+}
+</script>
+</body>
+</html>
